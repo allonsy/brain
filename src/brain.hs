@@ -20,8 +20,11 @@ type BrainState = StateT Deque IO
 accepted :: [Char]
 accepted = ['+', '-', '>', '<', '.', ',', '[', ']']
 
+zeroList :: [Int]
+zeroList = 0 : zeroList
+
 blankDeque :: Deque
-blankDeque = Deque (replicate 10 0) 0 (replicate 10 0)
+blankDeque = Deque zeroList 0 zeroList
 
 increment :: BrainState ()
 increment = do
@@ -34,7 +37,6 @@ decrement = do
   put $ Deque (top d) ((pointer d) -1) (bottom d)
 
 moveDequeRight :: Deque -> Deque
-moveDequeRight (Deque t p []) = Deque (p:t) 0 (replicate 10 0)
 moveDequeRight (Deque t p (b : bs)) = Deque (p:t) b bs
 
 moveRight :: BrainState ()
@@ -43,7 +45,6 @@ moveRight = do
   put $ moveDequeRight d
 
 moveDequeLeft :: Deque -> Deque
-moveDequeLeft (Deque [] p b) = Deque (replicate 10 0) 0 (p:b)
 moveDequeLeft (Deque (t:ts) p b) = Deque ts t (p:b)
 
 moveLeft :: BrainState ()
