@@ -3,7 +3,9 @@
 ## Written by Alec Snyder
 
 ###How to Use
-run ./brain [file-name]
+`run ./brain [file-name]`
+
+### Interactive features coming soon
 
 ### Issues/Questions?
 Feel free to submit issues on github, send me an email
