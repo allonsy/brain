@@ -15,7 +15,9 @@ data Deque a = Deque {
   bottom :: [a]
 } deriving(Show)
 
-type BrainState = StateT (Deque Int) IO
+type InputStack = (String, String)
+
+type BrainState = StateT (InputStack, Deque Int) IO
 
 accepted :: [Char]
 accepted = ['+', '-', '>', '<', '.', ',', '[', ']']
@@ -28,43 +30,58 @@ blankDeque = Deque zeroList 0 zeroList
 
 increment :: BrainState ()
 increment = do
-  d <- get
-  put $ Deque (top d) ((pointer d) +1) (bottom d)
+  (i, d) <- get
+  put $ (i, Deque (top d) ((pointer d) +1) (bottom d))
 
 decrement :: BrainState ()
 decrement = do
-  d <- get
-  put $ Deque (top d) ((pointer d) -1) (bottom d)
+  (i,d) <- get
+  put $ (i , Deque (top d) ((pointer d) -1) (bottom d))
 
 moveDequeRight :: Deque a -> Deque a
 moveDequeRight (Deque t p (b : bs)) = Deque (p:t) b bs
 
 moveRight :: BrainState ()
 moveRight = do
-  d <- get
-  put $ moveDequeRight d
+  (i,d) <- get
+  put $ (i, moveDequeRight d)
 
 moveDequeLeft :: Deque a -> Deque a
 moveDequeLeft (Deque (t:ts) p b) = Deque ts t (p:b)
 
 moveLeft :: BrainState ()
 moveLeft = do
-  d <- get
-  put $ moveDequeLeft d
+  (i,d) <- get
+  put $ (i, moveDequeLeft d)
+
+consume :: BrainState ()
+consume = do
+  ((con, uncon),d) <- get
+  debug $ "Consuming " ++ (show (head uncon))
+  put $ (((head uncon):con, tail uncon), d)
+
+unconsume :: BrainState ()
+unconsume = do
+  ((con, uncon), d) <- get
+  put $ ((tail con, (head con):uncon), d)
+
+debug :: String -> BrainState ()
+debug message = liftIO $ putStrLn message
 
 printChar :: BrainState ()
 printChar = do
-  d <- get
+  (i, d) <- get
   let toPrint = pointer d
   let charToPrint = chr toPrint
   liftIO $ putChar charToPrint
 
 getBrainChar :: BrainState ()
 getBrainChar = do
-  d <- get
+  (i,d) <- get
+  liftIO $ putStrLn "Here!"
   c <- liftIO $ getChar
   let intVal = ord c
-  put $ Deque (top d) intVal (bottom d)
+  put $ (i,Deque (top d) intVal (bottom d))
 
 isZero :: Deque Int -> Bool
 isZero (Deque t 0 b) = True
@@ -73,46 +90,76 @@ isZero _ = False
 isNotZero :: Deque Int -> Bool
 isNotZero d = not $ isZero d
 
-executeBrain :: String -> BrainState ()
-executeBrain [] = return ()
-executeBrain (x:xs)
-  | x == '+' = increment    >> executeBrain xs
-  | x == '-' = decrement    >> executeBrain xs
-  | x == '.' = printChar    >> executeBrain xs
-  | x == ',' = getBrainChar >> executeBrain xs
-  | x == '<' = moveLeft     >> executeBrain xs
-  | x == '>' = moveRight    >> executeBrain xs
-  | x == '[' = do
-    d <- get
-    if isZero d
-      then executeBrain $ skipBracket xs
-      else do
-        nextInst <- executeBracket xs xs
-        executeBrain nextInst
-  | x == ']' = error "Extra closed bracket included!"
-  | otherwise = error "Invalid Character"
+executeBrainState :: BrainState ()
+executeBrainState = do
+  (i,d) <- get
+  if (snd i == []) then return ()
+    else executeChar >> executeBrainState
 
-executeBracket :: String -> String -> BrainState String
-executeBracket str [] = error "Missing closing bracket"
-executeBracket str (x:xs)
-  | x /= '[' && x /= ']' = executeBrain [x] >> executeBracket str xs
-  | x == ']' = do
-    d <- get
-    if isZero d
-      then return xs
-      else executeBracket str str
-  | x == '[' = do
-    nextInst <- executeBracket xs xs
-    executeBracket str nextInst
+executeChar :: BrainState ()
+executeChar = do
+  (i,d) <- get
+  executeHelper i
 
-skipBracket :: String -> String
-skipBracket str = skipBracket' str 1 where
-  skipBracket' str 0 = str
-  skipBracket' [] _ = error "Closing bracket not found!"
-  skipBracket' (x:xs) n
-    | x == '[' = skipBracket' xs (n+1)
-    | x == ']' = skipBracket' xs (n-1)
-    | otherwise = skipBracket' xs n
+executeHelper :: InputStack -> BrainState ()
+executeHelper (con, []) = error "Empty"
+executeHelper (con, '>':uncon) = do
+  moveRight
+  consume
+executeHelper (con, '<':uncon) = do
+  moveLeft
+  consume
+executeHelper (con, '.':uncon) = do
+  printChar
+  consume
+executeHelper (con, ',':uncon) = do
+  getBrainChar
+  consume
+executeHelper (con, '+':uncon) = do
+  increment
+  consume
+executeHelper (con, '-':uncon) = do
+  decrement
+  consume
+executeHelper (con, '[':uncon) = do
+  moveForward
+executeHelper (con, ']':uncon) = do
+  moveBack
+executeHelper _ = error "undefined"
+
+moveForward :: BrainState ()
+moveForward = do
+  (i, d) <- get
+  if isZero d then do
+    spinForward
+  else do
+    consume
+    executeChar
+
+spinForward :: BrainState ()
+spinForward = do
+  ((con, uncon), d) <- get
+  if (head uncon) == ']' then do
+    debug "caught"
+    consume
+    executeChar
+  else debug "next" >> consume >> spinForward
+
+moveBack :: BrainState ()
+moveBack = do
+  (i,d) <- get
+  if isNotZero d then do
+    spinBack
+  else do
+    consume
+    executeChar
+spinBack :: BrainState ()
+spinBack = do
+  ((con, uncon), d) <- get
+  if (head con) == '[' then do
+    consume
+    executeChar
+  else unconsume >> spinBack
 
 format :: String -> String
 format = filter (\x -> x `elem` accepted)
@@ -127,5 +174,5 @@ main = do
   validate args
   prog <- readFile $ head args
   let program = format prog
-  _ <- runStateT (executeBrain program) blankDeque
+  _ <- runStateT (executeBrainState) (([], program),blankDeque)
   return ()
