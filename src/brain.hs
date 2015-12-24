@@ -9,13 +9,13 @@ import Data.Char
 import Control.Monad.IO.Class
 import System.Environment
 
-data Deque = Deque {
-  top :: [Int],
-  pointer :: Int,
-  bottom :: [Int]
+data Deque a = Deque {
+  top :: [a],
+  pointer :: a,
+  bottom :: [a]
 } deriving(Show)
 
-type BrainState = StateT Deque IO
+type BrainState = StateT (Deque Int) IO
 
 accepted :: [Char]
 accepted = ['+', '-', '>', '<', '.', ',', '[', ']']
@@ -23,7 +23,7 @@ accepted = ['+', '-', '>', '<', '.', ',', '[', ']']
 zeroList :: [Int]
 zeroList = 0 : zeroList
 
-blankDeque :: Deque
+blankDeque :: Deque Int
 blankDeque = Deque zeroList 0 zeroList
 
 increment :: BrainState ()
@@ -36,7 +36,7 @@ decrement = do
   d <- get
   put $ Deque (top d) ((pointer d) -1) (bottom d)
 
-moveDequeRight :: Deque -> Deque
+moveDequeRight :: Deque a -> Deque a
 moveDequeRight (Deque t p (b : bs)) = Deque (p:t) b bs
 
 moveRight :: BrainState ()
@@ -44,7 +44,7 @@ moveRight = do
   d <- get
   put $ moveDequeRight d
 
-moveDequeLeft :: Deque -> Deque
+moveDequeLeft :: Deque a -> Deque a
 moveDequeLeft (Deque (t:ts) p b) = Deque ts t (p:b)
 
 moveLeft :: BrainState ()
@@ -66,11 +66,11 @@ getBrainChar = do
   let intVal = ord c
   put $ Deque (top d) intVal (bottom d)
 
-isZero :: Deque -> Bool
+isZero :: Deque Int -> Bool
 isZero (Deque t 0 b) = True
 isZero _ = False
 
-isNotZero :: Deque -> Bool
+isNotZero :: Deque Int -> Bool
 isNotZero d = not $ isZero d
 
 executeBrain :: String -> BrainState ()
