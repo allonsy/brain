@@ -42,7 +42,7 @@ test-suite brainTest
   build-depends:
     base
    ,brain
-   ,process
+   ,process >= 1.4
    ,hspec
    ,QuickCheck
    ,transformers
