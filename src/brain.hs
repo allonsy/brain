@@ -54,16 +54,24 @@ moveLeft = do
   (i,d) <- get
   put $ (i, moveDequeLeft d)
 
-consume :: BrainState ()
+consume :: BrainState Char
 consume = do
   ((con, uncon),d) <- get
-  debug $ "Consuming " ++ (show (head uncon))
   put $ (((head uncon):con, tail uncon), d)
+  debug $ "Consuming " ++ (show (head uncon))
+  return $ head uncon
 
-unconsume :: BrainState ()
+unconsume :: BrainState Char
 unconsume = do
   ((con, uncon), d) <- get
   put $ ((tail con, (head con):uncon), d)
+  debug $ "unconsuming " ++ (show (head uncon))
+  return $ head uncon
+
+isEnd :: BrainState Bool
+isEnd = do
+  ((con,uncon),d) <- get
+  return $ uncon == []
 
 debug :: String -> BrainState ()
 debug message = liftIO $ putStrLn message
@@ -90,76 +98,72 @@ isZero _ = False
 isNotZero :: Deque Int -> Bool
 isNotZero d = not $ isZero d
 
+isBrainZero :: BrainState Bool
+isBrainZero = do
+  (i,d) <- get
+  return $ isZero d
+
+isBrainNotZero :: BrainState Bool
+isBrainNotZero = do
+  (i,d) <- get
+  return $ isNotZero d
+
+
 executeBrainState :: BrainState ()
 executeBrainState = do
-  (i,d) <- get
-  if (snd i == []) then return ()
-    else executeChar >> executeBrainState
+  val <- isEnd
+  if val then do
+    return ()
+  else do
+    ch <- consume
+    executeChar ch
+    executeBrainState
 
-executeChar :: BrainState ()
-executeChar = do
-  (i,d) <- get
-  executeHelper i
-
-executeHelper :: InputStack -> BrainState ()
-executeHelper (con, []) = error "Empty"
-executeHelper (con, '>':uncon) = do
+executeChar :: Char -> BrainState ()
+executeChar '>' = do
   moveRight
-  consume
-executeHelper (con, '<':uncon) = do
+executeChar '<' = do
   moveLeft
-  consume
-executeHelper (con, '.':uncon) = do
+executeChar '.' = do
+  debug "printing"
   printChar
-  consume
-executeHelper (con, ',':uncon) = do
+executeChar ',' = do
   getBrainChar
-  consume
-executeHelper (con, '+':uncon) = do
+executeChar '+' = do
   increment
-  consume
-executeHelper (con, '-':uncon) = do
+executeChar '-' = do
   decrement
-  consume
-executeHelper (con, '[':uncon) = do
-  moveForward
-executeHelper (con, ']':uncon) = do
-  moveBack
-executeHelper _ = error "undefined"
+executeChar '[' = do
+  val <- isBrainZero
+  if val then do
+    spin consume ['[']
+  else
+    return ()
+executeChar ']' = do
+  val <- isBrainNotZero
+  if val then do
+    spin unconsume [']']
+  else
+    return ()
+executeChar _ = error "undefined"
 
-moveForward :: BrainState ()
-moveForward = do
-  (i, d) <- get
-  if isZero d then do
-    spinForward
-  else do
-    consume
-    executeChar
+stackBracket :: Char -> [Char] -> [Char]
+stackBracket _ [] = error "The bracket system has encountered an error"
+stackBracket '[' (b:bs)
+  | b == ']' = bs
+  | otherwise = '[' : b : bs
+stackBracket ']' (b:bs)
+  | b == '[' = bs
+  | otherwise = ']' : b : bs
+stackBracket _ bs = bs
 
-spinForward :: BrainState ()
-spinForward = do
-  ((con, uncon), d) <- get
-  if (head uncon) == ']' then do
-    debug "caught"
-    consume
-    executeChar
-  else debug "next" >> consume >> spinForward
-
-moveBack :: BrainState ()
-moveBack = do
-  (i,d) <- get
-  if isNotZero d then do
-    spinBack
-  else do
-    consume
-    executeChar
-spinBack :: BrainState ()
-spinBack = do
-  ((con, uncon), d) <- get
-  if (head con) == '[' then do
-    consume
-    executeChar
-  else unconsume >> spinBack
+spin :: BrainState Char -> [Char] -> BrainState ()
+spin f ls = do
+  readHead <- f
+  debug $ "spinning " ++ [readHead]
+  let newLS = stackBracket readHead ls
+  if newLS == [] then return ()
+  else spin f newLS
 
 format :: String -> String
 format = filter (\x -> x `elem` accepted)
@@ -174,5 +178,6 @@ main = do
   validate args
   prog <- readFile $ head args
   let program = format prog
+  putStrLn $ "program is: " ++ program
   _ <- runStateT (executeBrainState) (([], program),blankDeque)
   return ()
