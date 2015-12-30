@@ -8,6 +8,7 @@ import System.IO
 import Data.Char
 import Control.Monad.IO.Class
 import System.Environment
+import Control.Monad
 
 data Deque a = Deque {
   top :: [a],
@@ -58,23 +59,21 @@ consume :: BrainState Char
 consume = do
   ((con, uncon),d) <- get
   put $ (((head uncon):con, tail uncon), d)
-  debug $ "Consuming " ++ (show (head uncon))
   return $ head uncon
 
 unconsume :: BrainState Char
 unconsume = do
   ((con, uncon), d) <- get
   put $ ((tail con, (head con):uncon), d)
-  debug $ "unconsuming " ++ (show (head uncon))
-  return $ head uncon
+  return $ head con
 
 isEnd :: BrainState Bool
 isEnd = do
   ((con,uncon),d) <- get
   return $ uncon == []
 
-debug :: String -> BrainState ()
-debug message = liftIO $ putStrLn message
+-- debug :: String -> BrainState ()
+-- debug message = liftIO $ putStrLn message
 
 printChar :: BrainState ()
 printChar = do
@@ -86,7 +85,6 @@ printChar = do
 getBrainChar :: BrainState ()
 getBrainChar = do
   (i,d) <- get
-  liftIO $ putStrLn "Here!"
   c <- liftIO $ getChar
   let intVal = ord c
   put $ (i,Deque (top d) intVal (bottom d))
@@ -125,7 +123,6 @@ executeChar '>' = do
 executeChar '<' = do
   moveLeft
 executeChar '.' = do
-  debug "printing"
   printChar
 executeChar ',' = do
   getBrainChar
@@ -136,13 +133,14 @@ executeChar '-' = do
 executeChar '[' = do
   val <- isBrainZero
   if val then do
-    spin consume ['[']
+    spin consume ['['] False
   else
     return ()
 executeChar ']' = do
   val <- isBrainNotZero
   if val then do
-    spin unconsume [']']
+    _ <- unconsume
+    spin unconsume [']'] True
   else
     return ()
 executeChar _ = error "undefined"
@@ -157,13 +155,16 @@ stackBracket ']' (b:bs)
   | otherwise = ']' : b : bs
 stackBracket _ bs = bs
 
-spin :: BrainState Char -> [Char] -> BrainState ()
-spin f ls = do
+spin :: BrainState Char -> [Char] -> Bool -> BrainState ()
+spin f ls garbage = do
   readHead <- f
-  debug $ "spinning " ++ [readHead]
   let newLS = stackBracket readHead ls
-  if newLS == [] then return ()
-  else spin f newLS
+  if newLS == [] then do
+    when garbage $ do
+      _ <- consume
+      return ()
+    return ()
+  else spin f newLS garbage
 
 format :: String -> String
 format = filter (\x -> x `elem` accepted)
@@ -178,6 +179,5 @@ main = do
   validate args
   prog <- readFile $ head args
   let program = format prog
-  putStrLn $ "program is: " ++ program
   _ <- runStateT (executeBrainState) (([], program),blankDeque)
   return ()
