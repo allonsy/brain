@@ -1,7 +1,21 @@
-module Main where
+module Brain
+  (runner,
+  format,
+  moveRight,
+  moveLeft,
+  increment,
+  decrement,
+  consume,
+  unconsume,
+  isZero,
+  isNotZero,
+  Deque(Deque,top, pointer, bottom),
+  stackBracket,
+  executeBrainState) where
 
 {- Alec Snyder
  - brainfuck interpreter
+ - main modules
 -}
 import Control.Monad.Trans.State.Lazy
 import System.IO
@@ -14,7 +28,7 @@ data Deque a = Deque {
   top :: [a],
   pointer :: a,
   bottom :: [a]
-} deriving(Show)
+} deriving(Show, Eq)
 
 type InputStack = (String, String)
 
@@ -72,8 +86,13 @@ isEnd = do
   ((con,uncon),d) <- get
   return $ uncon == []
 
--- debug :: String -> BrainState ()
--- debug message = liftIO $ putStrLn message
+isBegin :: BrainState Bool
+isBegin = do
+  ((con,uncon), d) <- get
+  return $ con == []
+
+debug :: String -> BrainState ()
+debug message = liftIO $ putStrLn message
 
 printChar :: BrainState ()
 printChar = do
@@ -139,7 +158,7 @@ executeChar '[' = do
 executeChar ']' = do
   val <- isBrainNotZero
   if val then do
-    _ <- unconsume
+    _ <- unconsume --handle unconsume nuances
     spin unconsume [']'] True
   else
     return ()
@@ -157,11 +176,15 @@ stackBracket _ bs = bs
 
 spin :: BrainState Char -> [Char] -> Bool -> BrainState ()
 spin f ls garbage = do
+  endFlag <- isEnd
+  when (not garbage && endFlag) $ error "Unmatched end bracket"
+  beginFlag <- isBegin
+  when (garbage && beginFlag) $ error "Unmatched begin bracket"
   readHead <- f
   let newLS = stackBracket readHead ls
   if newLS == [] then do
     when garbage $ do
-      _ <- consume
+      _ <- consume -- handle unconsume nuances
       return ()
     return ()
   else spin f newLS garbage
@@ -173,11 +196,11 @@ validate :: [String] -> IO ()
 validate [] = error "Please provide a filename as an argument!"
 validate _ = return ()
 
-main :: IO ()
-main = do
+runner :: IO ()
+runner = do
   args <- getArgs
   validate args
   prog <- readFile $ head args
   let program = format prog
-  _ <- runStateT (executeBrainState) (([], program),blankDeque)
+  _ <- runStateT executeBrainState (("", program),blankDeque)
   return ()
