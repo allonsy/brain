@@ -91,8 +91,8 @@ isBegin = do
   ((con,uncon), d) <- get
   return $ con == []
 
-debug :: String -> BrainState ()
-debug message = liftIO $ putStrLn message
+-- debug :: String -> BrainState ()
+-- debug message = liftIO $ putStrLn message
 
 printChar :: BrainState ()
 printChar = do
