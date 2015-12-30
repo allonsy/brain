@@ -17,12 +17,15 @@ module Brain
  - brainfuck interpreter
  - main modules
 -}
+
 import Control.Monad.Trans.State.Lazy
-import System.IO
-import Data.Char
 import Control.Monad.IO.Class
-import System.Environment
 import Control.Monad
+import Data.Char
+import System.IO
+import System.Environment
+import System.Exit
+import BrainTrans
 
 data Deque a = Deque {
   top :: [a],
@@ -35,7 +38,7 @@ type InputStack = (String, String)
 type BrainState = StateT (InputStack, Deque Int) IO
 
 accepted :: [Char]
-accepted = ['+', '-', '>', '<', '.', ',', '[', ']']
+accepted = "+-><.,[]"
 
 zeroList :: [Int]
 zeroList = 0 : zeroList
@@ -192,6 +195,11 @@ spin f ls garbage = do
 format :: String -> String
 format = filter (\x -> x `elem` accepted)
 
+findFilename :: [String] -> String
+findFilename args
+  | length args >= 2 = args !! 1
+  | otherwise = head args
+
 validate :: [String] -> IO ()
 validate [] = error "Please provide a filename as an argument!"
 validate _ = return ()
@@ -200,7 +208,11 @@ runner :: IO ()
 runner = do
   args <- getArgs
   validate args
-  prog <- readFile $ head args
+  prog <- readFile $ findFilename args
   let program = format prog
-  _ <- runStateT executeBrainState (("", program),blankDeque)
-  return ()
+  if (args !! 0) ==  "-t" then do
+    runCompiler program (args !! 1)
+    exitSuccess
+    else do
+      _ <- runStateT executeBrainState (("", program),blankDeque)
+      return ()

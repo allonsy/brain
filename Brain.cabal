@@ -16,11 +16,14 @@ cabal-version:       >=1.10
 
 library
   hs-source-dirs: src
+  other-modules: BrainTrans
   exposed-modules:
     Brain
   build-depends:
     base
     ,transformers
+    ,filepath
+    ,process >= 1.4
   default-language: Haskell2010
   ghc-options:
 
@@ -31,6 +34,8 @@ executable brain
   build-depends:
     base
     ,transformers
+    ,filepath
+    ,process >= 1.4
     ,brain
   hs-source-dirs:      src
   default-language:    Haskell2010

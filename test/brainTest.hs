@@ -113,15 +113,15 @@ main = do
     it "shoule show nonzero correctly" $ checkNotZero   `shouldBe`     True
 
   hspec $ describe "Testing bracket operations" $ do
-    it "should error on empty stack" $ evaluate (stackBracket 'a' []) `shouldThrow` anyException
-    it "should ignore non stack chars" $ (stackBracket 'a' "[]") `shouldBe` "[]"
-    it "should append like stack symbols" $ checkLikeStacks `shouldBe` True
-    it "should cancel out matching brackets" $ checkMatchingBrackets `shouldBe` True
-    it "should skip open brackets on zero"   $ checkSkipBracket `shouldReturn` True
-    it "should loop properly"                $ checkLoops `shouldReturn` True
+    it "should error on empty stack"         $ evaluate (stackBracket 'a' []) `shouldThrow` anyException
+    it "should ignore non stack chars"       $ (stackBracket 'a' "[]")        `shouldBe` "[]"
+    it "should append like stack symbols"    $ checkLikeStacks                `shouldBe` True
+    it "should cancel out matching brackets" $ checkMatchingBrackets          `shouldBe` True
+    it "should skip open brackets on zero"   $ checkSkipBracket               `shouldReturn` True
+    it "should loop properly"                $ checkLoops                     `shouldReturn` True
 
   hspec $ describe "Test bad programs" $ do
-    it "Should error on unmatched end bracket"   $ checkUnmatchedEndBracket `shouldThrow` anyException
+    it "Should error on unmatched end bracket"   $ checkUnmatchedEndBracket   `shouldThrow` anyException
     it "Should error on unmatched begin bracket" $ checkUnmatchedBeginBracket `shouldThrow` anyException
 
   hspec $ describe "Total functionality" $ do
