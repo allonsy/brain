@@ -15,36 +15,38 @@ extra-source-files:  README.md
 cabal-version:       >=1.10
 
 library
-  hs-source-dirs: src
+  hs-source-dirs: lib
   exposed-modules:
-    Brain
+    Brain,
+    BrainParser
   build-depends:
-    base
-    ,transformers
+    base,
+    mtl
   default-language: Haskell2010
   ghc-options:
 
 executable brain
-  main-is: brainRunner.hs
-  -- other-modules:
+  hs-source-dirs: runner
+  main-is: Main.hs
+  other-modules: BrainRunner
   -- other-extensions:
   build-depends:
-    base
-    ,transformers
-    ,brain
+    base,
+    mtl,
+    brain
   hs-source-dirs:      src
   default-language:    Haskell2010
 
-test-suite brainTest
-  hs-source-dirs: test
-  main-is: brainTest.hs
-  type: exitcode-stdio-1.0
-  build-depends:
-    base
-   ,brain
-   ,process >= 1.4
-   ,hspec
-   ,QuickCheck
-   ,transformers
-  default-language: Haskell2010
-  ghc-options:
+-- test-suite brainTest
+--   hs-source-dirs: test
+--   main-is: brainTest.hs
+--   type: exitcode-stdio-1.0
+--   build-depends:
+--     base
+--    ,brain
+--    ,process >= 1.4
+--    ,hspec
+--    ,QuickCheck
+--    ,transformers
+--   default-language: Haskell2010
+--   ghc-options:
